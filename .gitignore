@@ -1,0 +1,6 @@
+.env
+
+mongo/*
+mysql/*
+pgsql/*
+volumes/cache/*
