@@ -11,19 +11,17 @@
 class OneClickLogin
 {
     /** @access protected */
-    var $servers, $driver;
+    var $servers;
 
     /** 
      *
      * Set supported servers
      * @param array $servers
-     * @param string $driver
      */
-    function __construct($servers, $driver = "server")
+    function __construct($servers)
     {
 
         $this->servers = $servers;
-        $this->driver = $driver;
     }
 
     function login($login, $password)
@@ -75,10 +73,10 @@ class OneClickLogin
                         <td style="vertical-align:middle"><?php echo $databases[$database] ?></td>
                         <td>
                             <form action="" method="post">
-                                <input type="hidden" name="auth[driver]" value="<?php echo $this->driver; ?>">
+                                <input type="hidden" name="auth[driver]" value="<?php echo h($server["driver"]); ?>">
                                 <input type="hidden" name="auth[server]" value="<?php echo $host; ?>">
                                 <input type="hidden" name="auth[username]" value="<?php echo h($server["username"]); ?>">
-                                <input type="hidden" name="auth[password]" value="<?php echo h($server["pass"]); ?>">
+                                <input type="hidden" name="auth[password]" value="<?php echo h($server["password"]); ?>">
                                 <input type='hidden' name="auth[db]" value="<?php echo h($database); ?>" />
                                 <input type='hidden' name="auth[permanent]" value="1" />
                                 <input type="submit" value="<?php echo lang('Enter'); ?>">

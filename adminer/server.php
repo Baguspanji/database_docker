@@ -2,17 +2,22 @@
 return [
 	
     'mysql' => array(
-		// Required parameters
         'username'  => 'root',
-        'pass'      => 'root',
+        'password'      => 'root',
         // Optional parameters
         'label'     => 'MySQL',
+        'driver'    => 'server',
         'databases' => array(
-            // 'mysql' => 'MySQL',
-            // 'information_schema' => 'information_schema',
-            // 'performance_schema' => 'performance_schema',
-            // 'sys' => 'sys',
             'db_simpul' => 'db_simpul',
+        ),
+    ),
+    'pgsql' => array(
+        'username'  => 'root',
+        'password'      => 'root',
+        'label'     => 'PostgreSQL',
+        'driver'    => 'pgsql',
+        'databases' => array(
+            'hedwig' => 'hedwig',
         ),
     ),
 ];

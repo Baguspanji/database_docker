@@ -4,3 +4,5 @@ mongo/*
 mysql/*
 pgsql/*
 volumes/cache/*
+
+adminer/logs/*.sql
