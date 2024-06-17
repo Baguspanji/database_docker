@@ -26,7 +26,7 @@ function adminer_object() {
         // new AllowEmptyPasswordPlugin(),
         
         new AdminerSqlLog('./logs/sql-log.sql'),
-        new OneClickLogin(include './server.php'),
+        // new OneClickLogin(include './server.php'),
     );
     
     /* It is possible to combine customization and plugins:
