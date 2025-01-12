@@ -1,10 +1,10 @@
-version: "3.1"
+version: "3.7"
 
 services:
   mysql:
     container_name: mysql
     image: mysql:8.0
-    command: mysqld --sql_mode="traditional" --default-authentication-plugin=mysql_native_password --log_bin_trust_function_creators=1
+    # command: mysqld --sql_mode="traditional" --default-authentication-plugin=mysql_native_password --log_bin_trust_function_creators=1
     # restart: always
     environment:
       MYSQL_ROOT_PASSWORD: root
@@ -12,16 +12,17 @@ services:
       - 3306:3306
     volumes:
       - ./mysql:/var/lib/mysql
+      - ./config/mysql/my.cnf:/etc/mysql/conf.d/my.cnf
     networks:
       - net
-    healthcheck:
-      test:
-        - CMD
-        - mysqladmin
-        - ping
-        - "-p root"
-      retries: 3
-      timeout: 5s
+    # healthcheck:
+    #   test:
+    #     - CMD
+    #     - mysqladmin
+    #     - ping
+    #     - "-p root"
+    #   retries: 3
+    #   timeout: 5s
 
   pgsql:
     container_name: pgsql
@@ -62,13 +63,13 @@ services:
       - 6379:6379
     networks:
       - net
-    healthcheck:
-      test:
-        - CMD
-        - redis-cli
-        - ping
-      retries: 3
-      timeout: 5s
+    # healthcheck:
+    #   test:
+    #     - CMD
+    #     - redis-cli
+    #     - ping
+    #   retries: 3
+    #   timeout: 5s
 
   adminer:
     image: adminer
@@ -77,6 +78,7 @@ services:
       - ./adminer:/var/www/html
     ports:
       - 8080:8080
+    command: ["php", "-d", "post_max_size=500M", "-d", "upload_max_filesize=500M", "-S", "0.0.0.0:8080", "-t", "/var/www/html"]
     networks:
       - net
 
