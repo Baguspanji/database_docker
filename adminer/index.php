@@ -25,7 +25,7 @@ function adminer_object() {
         // new AdminerTreeViewer('./plugins/tree-viewer.js'),
         // new AllowEmptyPasswordPlugin(),
         
-        new AdminerSqlLog('./logs/sql-log.sql'),
+        // new AdminerSqlLog('./logs/sql-log.sql'),
         // new OneClickLogin(include './server.php'),
     );
     
