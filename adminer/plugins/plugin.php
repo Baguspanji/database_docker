@@ -6,7 +6,7 @@
 * @license https://www.apache.org/licenses/LICENSE-2.0 Apache License, Version 2.0
 * @license https://www.gnu.org/licenses/gpl-2.0.html GNU General Public License, version 2 (one or other)
 */
-class AdminerPlugin extends Adminer {
+class AdminerPlugin extends \Adminer\Adminer {
 	/** @access protected */
 	var $plugins;
 	
@@ -83,6 +83,11 @@ class AdminerPlugin extends Adminer {
 		return $this->_appendPlugin(__FUNCTION__, $args);
 	}
 
+	function editRowPrint($table, $fields, $row, $update) {
+		$args = func_get_args();
+		return $this->_appendPlugin(__FUNCTION__, $args);
+	}
+
 	function editFunctions($field) {
 		$args = func_get_args();
 		return $this->_appendPlugin(__FUNCTION__, $args);
@@ -106,6 +111,11 @@ class AdminerPlugin extends Adminer {
 	}
 
 	function permanentLogin($create = false) {
+		$args = func_get_args();
+		return $this->_applyPlugin(__FUNCTION__, $args);
+	}
+
+	function bruteForceKey() {
 		$args = func_get_args();
 		return $this->_applyPlugin(__FUNCTION__, $args);
 	}

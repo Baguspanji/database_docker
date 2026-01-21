@@ -1,8 +1,11 @@
 .env
 
+databasus-data/*
 mongo/*
 mysql/*
 pgsql/*
 volumes/cache/*
+restore_mysql/*
 
 adminer/logs/*.sql
+adminer/*
