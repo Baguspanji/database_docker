@@ -10,7 +10,7 @@ if (isset($_GET["simpledb"])) {
 		class Db extends SqlDb {
 			public $extension = "SimpleXML", $server_info = '2009-04-15', $timeout, $next;
 
-			function attach($server, $username, $password): string {
+			function attach(array $server, $username, $password) {
 				return '';
 			}
 
@@ -41,7 +41,7 @@ if (isset($_GET["simpledb"])) {
 				return new Result($result);
 			}
 
-			function quote($string): string {
+			function quote($string) {
 				return "'" . str_replace("'", "''", $string) . "'";
 			}
 		}
@@ -50,7 +50,7 @@ if (isset($_GET["simpledb"])) {
 			public $num_rows;
 			private $rows = array(), $offset = 0;
 
-			function __construct($result) {
+			function __construct(array $result) {
 				foreach ($result as $item) {
 					$row = array();
 					if ($item->Name != '') { // SELECT COUNT(*)
@@ -101,9 +101,9 @@ if (isset($_GET["simpledb"])) {
 				return array_values($return);
 			}
 
-			function fetch_field(): \stdClass {
+			function fetch_field() {
 				$keys = array_keys($this->rows[0]);
-				return (object) array('name' => $keys[$this->offset++], 'type' => 15, 'charsetnr' => 0);
+				return (object) array('name' => $keys[$this->offset++]);
 			}
 		}
 	}
@@ -113,23 +113,44 @@ if (isset($_GET["simpledb"])) {
 	class Driver extends SqlDriver {
 		static $extensions = array("SimpleXML + allow_url_fopen");
 		static $jush = "simpledb";
+		static $passwords = false;
 
-		public $operators = array("=", "<", ">", "<=", ">=", "!=", "LIKE", "LIKE %%", "IN", "IS NULL", "NOT LIKE", "IS NOT NULL");
+		static $serverSchemes = array("http", "https");
+
 		public $grouping = array("count");
 
 		public $primary = "itemName()";
 
-		static function connect($server, $username, $password) {
-			if (!preg_match('~^(https?://)?[-a-z\d.]+(:\d+)?$~', $server)) {
-				return lang('Invalid server.');
-			}
-			if ($password != "") {
-				return lang('Database does not support password.');
-			}
-			return parent::connect($server, $username, $password);
+		function operators($tableStatus) {
+			return array("=", "<", ">", "<=", ">=", "!=", "LIKE", "LIKE %%", "IN", "IS NULL", "NOT LIKE", "IS NOT NULL");
 		}
 
-		private function chunkRequest($ids, $action, $params, $expand = array()) {
+		/** Get the JUSH module inlined in the released driver by the release script */
+		static function jushModule() {
+			return <<<'JS'
+jush.tr.simpledb = { sqlite_apo: /'/, sqlite_quo: /"/, bac: /`/ };
+
+jush.build_links2('simpledb', 'https://docs.aws.amazon.com/AmazonSimpleDB/latest/DeveloperGuide/$key.html', /(\b)/, /(\b)/gi, {
+	'QuotingRulesSelect': /(select|limit)/,
+	'CountingDataSelect': /(count)/,
+	'SortingDataSelect': /(order\s+by|asc|desc)/,
+	'SimpleQueriesSelect': /(where)/,
+	'UsingSelectOperators': /(between|like|is|in)/,
+	'RangeValueQueriesSelect': /(every)/,
+	'': /(or|and|not|from|null|intersection)/,
+});
+JS;
+		}
+
+		static function jushAutocomplete(array $tables, $statements) {
+			return ""; // the queries are only a select expression and the columns are not known
+		}
+
+		function hasEstimatedRows() {
+			return true; // DomainMetadata returns ItemCount with the time when it was calculated
+		}
+
+		private function chunkRequest(array $ids, $action, array $params, array $expand = array()) {
 			foreach (array_chunk($ids, 25) as $chunk) {
 				$params2 = $params;
 				foreach ($chunk as $i => $id) {
@@ -142,7 +163,7 @@ if (isset($_GET["simpledb"])) {
 					return false;
 				}
 			}
-			connection()->affected_rows = count($ids);
+			$this->conn->affected_rows = count($ids);
 			return true;
 		}
 
@@ -159,9 +180,10 @@ if (isset($_GET["simpledb"])) {
 		}
 
 		function select($table, array $select, array $where, array $group, array $order = array(), $limit = 1, $page = 0, $print = false) {
-			connection()->next = $_GET["next"];
+			$this->conn->next = $_GET["next"];
+			$_GET["next"] = ""; // set by sdb_request_all() if there is a following page
 			$return = parent::select($table, $select, $where, $group, $order, $limit, $page, $print);
-			connection()->next = 0;
+			$this->conn->next = 0;
 			return $return;
 		}
 
@@ -182,7 +204,7 @@ if (isset($_GET["simpledb"])) {
 			unset($set["`itemName()`"]);
 			foreach ($set as $key => $val) {
 				$key = idf_unescape($key);
-				if ($val == "NULL" || ($id != "" && array($id) != $ids)) {
+				if ($val == "NULL" || ($id != "" && $ids != array($id))) {
 					$delete["Attribute." . count($delete) . ".Name"] = $key;
 				}
 				if ($val != "NULL") {
@@ -253,7 +275,7 @@ if (isset($_GET["simpledb"])) {
 
 
 	function support($feature) {
-		return preg_match('~sql~', $feature);
+		return preg_match('~^(cursor|sql)$~', $feature);
 	}
 
 	function logged_user() {
@@ -269,7 +291,7 @@ if (isset($_GET["simpledb"])) {
 		return array();
 	}
 
-	function db_collation($db, $collations) {
+	function db_collation($db, array $collations) {
 	}
 
 	function tables_list() {
@@ -278,7 +300,7 @@ if (isset($_GET["simpledb"])) {
 			$return[(string) $table] = 'table';
 		}
 		if (connection()->error && defined('Adminer\PAGE_HEADER')) {
-			echo "<p class='error'>" . error() . "\n";
+			echo "<p class='error'>" . adminer()->error() . "\n";
 		}
 		return $return;
 	}
@@ -307,7 +329,7 @@ if (isset($_GET["simpledb"])) {
 		return $return;
 	}
 
-	function explain($connection, $query) {
+	function explain(Db $connection, $query) {
 	}
 
 	function error() {
@@ -315,6 +337,7 @@ if (isset($_GET["simpledb"])) {
 	}
 
 	function information_schema($db) {
+		return false;
 	}
 
 	function indexes($table, $connection2 = null) {
@@ -343,18 +366,29 @@ if (isset($_GET["simpledb"])) {
 		return " $query$where" . ($limit ? $separator . "LIMIT $limit" : "");
 	}
 
-	function unconvert_field($field, $return) {
+	function limit1($table, $query, $where, $separator = "\n") {
+		return limit($query, $where, 1, 0, $separator);
+	}
+
+	function convert_field(array $field) {
+	}
+
+	function unconvert_field(array $field, $return) {
 		return $return;
 	}
 
-	function fk_support($table_status) {
+	function is_view(array $table_status) {
+		return false;
 	}
 
-	function alter_table($table, $name, $fields, $foreign, $comment, $engine, $collation, $auto_increment, $partitioning) {
+	function fk_support(array $table_status) {
+	}
+
+	function alter_table($table, $name, array $fields, array $foreign, $comment, $engine, $collation, $auto_increment, $partitioning) {
 		return ($table == "" && sdb_request('CreateDomain', array('DomainName' => $name)));
 	}
 
-	function drop_tables($tables) {
+	function drop_tables(array $tables) {
 		foreach ($tables as $table) {
 			if (!sdb_request('DeleteDomain', array('DomainName' => $table))) {
 				return false;
@@ -363,21 +397,24 @@ if (isset($_GET["simpledb"])) {
 		return true;
 	}
 
-	function count_tables($databases) {
+	function count_tables(array $databases) {
 		foreach ($databases as $db) {
 			return array($db => count(tables_list()));
 		}
 	}
 
-	function found_rows($table_status, $where) {
+	function found_rows(array $table_status, array $where) {
 		return ($where ? null : $table_status["Rows"]);
 	}
 
 	function last_id($result) {
 	}
 
-	function sdb_request($action, $params = array()) {
+	function sdb_request($action, array $params = array()) {
 		list($host, $params['AWSAccessKeyId'], $secret) = adminer()->credentials();
+		if ($host == "") {
+			$host = "sdb.amazonaws.com";
+		}
 		$params['Action'] = $action;
 		$params['Timestamp'] = gmdate('Y-m-d\TH:i:s+00:00');
 		$params['Version'] = '2009-04-15';
@@ -390,7 +427,7 @@ if (isset($_GET["simpledb"])) {
 		}
 		$query = str_replace('%7E', '~', substr($query, 1));
 		$query .= "&Signature=" . urlencode(base64_encode(hash_hmac('sha1', "POST\n" . preg_replace('~^https?://~', '', $host) . "\n/\n$query", $secret, true)));
-		$file = @file_get_contents((preg_match('~^https?://~', $host) ? $host : "http://$host"), false, stream_context_create(array('http' => array(
+		list($file) = get_url((preg_match('~^https?://~', $host) ? $host : "http://$host"), stream_context_create(array('http' => array(
 			'method' => 'POST', // may not fit in URL with GET
 			'content' => $query,
 			'ignore_errors' => 1,
@@ -419,7 +456,7 @@ if (isset($_GET["simpledb"])) {
 		return ($xml->$tag ?: true);
 	}
 
-	function sdb_request_all($action, $tag, $params = array(), $timeout = 0) {
+	function sdb_request_all($action, $tag, array $params = array(), $timeout = 0) {
 		$return = array();
 		$start = ($timeout ? microtime(true) : 0);
 		$limit = (preg_match('~LIMIT\s+(\d+)\s*$~i', $params['SelectExpression'], $match) ? $match[1] : 0);
@@ -432,7 +469,7 @@ if (isset($_GET["simpledb"])) {
 				$return[] = $element;
 			}
 			if ($limit && count($return) >= $limit) {
-				$_GET["next"] = $xml->NextToken;
+				$_GET["next"] = (string) $xml->NextToken;
 				break;
 			}
 			if ($timeout && microtime(true) - $start > $timeout) {

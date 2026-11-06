@@ -24,9 +24,8 @@ if (isset($_GET["imap"])) {
 			private $mailbox;
 			private $imap;
 
-			function attach($server, $username, $password): string {
-				list($host, $port) = host_port($server);
-				$this->mailbox = "{" . "$host:" . ($port ?: 993) . "/ssl}"; // Adminer disallows specifying privileged port in server name
+			function attach(array $server, $username, $password) {
+				$this->mailbox = "{" . "$server[host]:" . ($server["port"] ?: 993) . "/ssl}";
 				$this->imap = @imap_open($this->mailbox, $username, $password, OP_HALFOPEN, 1);
 				return ($this->imap ? '' : imap_last_error());
 			}
@@ -68,7 +67,7 @@ if (isset($_GET["imap"])) {
 				return false;
 			}
 
-			function quote($string): string {
+			function quote($string) {
 				return $string;
 			}
 
@@ -115,7 +114,7 @@ if (isset($_GET["imap"])) {
 			private $result;
 			private $fields;
 
-			function __construct($result) {
+			function __construct(array $result) {
 				$this->result = $result;
 				$this->num_rows = count($result);
 				$this->fields = array_keys(idx($result, 0, array()));
@@ -132,10 +131,10 @@ if (isset($_GET["imap"])) {
 				return ($row ? array_values($row) : false);
 			}
 
-			function fetch_field(): \stdClass {
+			function fetch_field() {
 				$field = current($this->fields);
 				next($this->fields);
-				return ($field != '' ? (object) array('name' => $field, 'type' => 15, 'charsetnr' => 0) : false);
+				return (object) ($field != '' ? array('name' => $field) : array());
 			}
 		}
 	}
@@ -143,6 +142,8 @@ if (isset($_GET["imap"])) {
 	class Driver extends SqlDriver {
 		static $extensions = array("imap");
 		static $jush = "imap";
+		static $serverPorts = array(993);
+
 		public $insertFunctions = array("json");
 	}
 
@@ -158,10 +159,11 @@ if (isset($_GET["imap"])) {
 		return array();
 	}
 
-	function db_collation($db, $collations) {
+	function db_collation($db, array $collations) {
 	}
 
 	function information_schema($db) {
+		return false;
 	}
 
 	function indexes($table, $connection2 = null) {
@@ -201,15 +203,19 @@ if (isset($_GET["imap"])) {
 		return $return;
 	}
 
-	function convert_field($field) {
+	function convert_field(array $field) {
 	}
 
-	function unconvert_field($field, $return) {
+	function unconvert_field(array $field, $return) {
 		return $return;
 	}
 
 	function limit($query, $where, $limit, $offset = 0, $separator = " ") {
 		return " $query$where" . ($limit ? $separator . "LIMIT $limit" . ($offset ? " OFFSET $offset" : "") : "");
+	}
+
+	function limit1($table, $query, $where, $separator = "\n") {
+		return limit($query, $where, 1, 0, $separator);
 	}
 
 	function idf_escape($idf) {
@@ -236,7 +242,7 @@ if (isset($_GET["imap"])) {
 		return $return;
 	}
 
-	function count_tables($databases) {
+	function count_tables(array $databases) {
 		return array(reset($databases) => count(tables_list()));
 	}
 
@@ -244,22 +250,25 @@ if (isset($_GET["imap"])) {
 		return h(connection()->error);
 	}
 
-	function is_view($table_status) {
+	function is_view(array $table_status) {
 		return false;
 	}
 
-	function found_rows($table_status, $where) {
+	function last_id($result) {
+	}
+
+	function found_rows(array $table_status, array $where) {
 		return $table_status["Rows"];
 	}
 
-	function fk_support($table_status) {
+	function fk_support(array $table_status) {
 	}
 
-	function alter_table($table, $name, $fields, $foreign, $comment, $engine, $collation, $auto_increment, $partitioning) {
+	function alter_table($table, $name, array $fields, array $foreign, $comment, $engine, $collation, $auto_increment, $partitioning) {
 		return connection()->create($name);
 	}
 
-	function drop_tables($tables) {
+	function drop_tables(array $tables) {
 		$return = true;
 		foreach ($tables as $name) {
 			$return = $return && connection()->drop($name);
@@ -267,7 +276,7 @@ if (isset($_GET["imap"])) {
 		return $return;
 	}
 
-	function truncate_tables($tables) {
+	function truncate_tables(array $tables) {
 		return connection()->expunge();
 	}
 
