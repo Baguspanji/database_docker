@@ -4,6 +4,8 @@ databasus-data/*
 mongo/*
 mysql/*
 pgsql/*
+postgres_data/*
+postgres_data.bak/*
 volumes/cache/*
 restore_mysql/*
 

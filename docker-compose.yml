@@ -74,7 +74,10 @@ services:
 
   pgsql:
     container_name: pgsql
-    image: postgres:17-alpine
+    build:
+      context: .
+      dockerfile: Dockerfile.pgsql
+    image: pgsql-custom:17
     volumes:
       - ./postgres_data:/var/lib/postgresql/data
       # - ./pgsql:/var/lib/postgresql/data
